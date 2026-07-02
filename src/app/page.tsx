@@ -24,18 +24,28 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-50 flex flex-col items-center justify-center p-6">
-      {/* Header — always visible */}
+    <main
+      className="min-h-screen flex flex-col items-center justify-center p-6"
+      style={{ background: "var(--color-ink)" }}
+    >
+      {/* ── Header ───────────────────────────────────────────────────────── */}
       <div className="text-center mb-10">
-        <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-neutral-200 to-neutral-500">
-          Surfaced.ai
+        <h1
+          className="text-hero tracking-tight"
+          style={{ color: "var(--color-text-primary)", fontFamily: "var(--font-space-grotesk), system-ui, sans-serif" }}
+        >
+          Surfaced
+          <span style={{ color: "var(--color-teal)" }}>.ai</span>
         </h1>
-        <p className="mt-3 text-xl md:text-2xl text-neutral-400 font-light">
+        <p
+          className="mt-3 text-xl font-light"
+          style={{ color: "var(--color-text-muted)", fontFamily: "var(--font-inter), system-ui, sans-serif" }}
+        >
           See if your content actually gets found.
         </p>
       </div>
 
-      {/* View switcher */}
+      {/* ── View ─────────────────────────────────────────────────────────── */}
       {view === "input" || !report ? (
         <AuditInput onAuditComplete={handleAuditComplete} />
       ) : (

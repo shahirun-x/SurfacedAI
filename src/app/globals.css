@@ -1,26 +1,95 @@
 @import "tailwindcss";
 
+/* ─── Design Tokens: Depth → Surface palette ─────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-ink:          #0A0F1A;
+  --color-teal:         #2DD4BF;
+  --color-teal-dim:     #1a9e8f;
+  --color-amber:        #F5A623;
+  --color-text-primary: #E8ECF1;
+  --color-text-muted:   #8B95A7;
+  --color-surface:      #111827;
+  --color-surface-alt:  #0d1420;
+  --color-border:       #1e2a3a;
 }
 
+/* ─── Tailwind v4 theme registration ─────────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ink:          var(--color-ink);
+  --color-teal:         var(--color-teal);
+  --color-teal-dim:     var(--color-teal-dim);
+  --color-amber:        var(--color-amber);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-muted:   var(--color-text-muted);
+  --color-surface:      var(--color-surface);
+  --color-surface-alt:  var(--color-surface-alt);
+  --color-border:       var(--color-border);
+
+  --font-heading: var(--font-space-grotesk);
+  --font-body:    var(--font-inter);
+  --font-mono:    var(--font-jetbrains-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ─── Base ────────────────────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    background-color: var(--color-ink);
+    color: var(--color-text-primary);
+  }
+
+  body {
+    background-color: var(--color-ink);
+    color: var(--color-text-primary);
+    font-family: var(--font-inter), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-space-grotesk), system-ui, sans-serif;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ─── Type scale utilities ────────────────────────────────────────────────── */
+@layer components {
+  .text-hero {
+    font-size: 4rem;
+    line-height: 1.05;
+    font-family: var(--font-space-grotesk), system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .text-h1 {
+    font-size: 2.5rem;
+    line-height: 1.15;
+    font-family: var(--font-space-grotesk), system-ui, sans-serif;
+    font-weight: 700;
+  }
+
+  .text-h2 {
+    font-size: 1.75rem;
+    line-height: 1.25;
+    font-family: var(--font-space-grotesk), system-ui, sans-serif;
+    font-weight: 600;
+  }
+
+  .text-body {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .text-caption {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .font-instrument {
+    font-family: var(--font-jetbrains-mono), 'Courier New', monospace;
+    font-variant-numeric: tabular-nums;
+  }
 }
