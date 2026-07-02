@@ -5,6 +5,7 @@ export interface AuditIssue {
   title: string;
   description: string;
   suggestion: string;
+  borderline?: boolean;
 }
 
 export interface PillarScore {

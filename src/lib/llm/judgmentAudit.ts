@@ -1,10 +1,23 @@
-import { getRule, buildIssueFromRule } from "../analysis/rules/loader";
+import { buildIssueFromRule } from "../analysis/rules/loader";
+import rulesData from "../analysis/rules/content-rules-dataset.json";
 import { runWithFallback } from "./index";
 import type { AuditIssue } from "@/types/audit";
+import type { BrandConfig } from "../analysis/config";
+import type { RuleDefinition } from "../analysis/rules/loader";
 
-export async function runJudgmentChecks(content: string, ruleIds: string[]): Promise<AuditIssue[]> {
-  const rules = ruleIds.map(getRule);
+const typedRulesData = rulesData as RuleDefinition[];
+
+export async function runJudgmentChecks(content: string, brandConfig: BrandConfig): Promise<AuditIssue[]> {
+  const rules = typedRulesData.filter(r => {
+    if (r.check_type !== "judgment_required") return false;
+    if (r.id.startsWith("checklist-crossref-")) return false;
+    if (r.applies_to === "competitor_review_articles") return false;
+    if (r.scope === "brand_specific" && (!brandConfig.brandName || brandConfig.brandName.trim() === "")) return false;
+    return true;
+  });
   
+  console.log(`[LLM] Evaluated ${rules.length} rules dynamically. Rules: ${rules.map(r => r.id).join(", ")}`);
+
   const rulesPrompt = rules.map(r => `
 Rule ID: ${r.id}
 Description: ${r.description}
@@ -29,6 +42,7 @@ The JSON array should contain one object per rule evaluated, with this exact sha
   {
     "rule_id": "the-rule-id",
     "triggered": true, // true if the content VIOLATES the rule and an issue should be raised, false if it complies
+    "confidence": "high", // "high" or "borderline". Use "borderline" when the content could reasonably be judged either way, and "high" when the violation or pass is clear-cut.
     "finding": "1-2 sentence specific explanation of what was found, referencing actual content from the article."
   }
 ]
@@ -61,8 +75,8 @@ The JSON array should contain one object per rule evaluated, with this exact sha
   const issues: AuditIssue[] = [];
   for (const item of parsed) {
     if (item.triggered) {
-      // Create issue and append the LLM finding as extraContext
-      issues.push(buildIssueFromRule(item.rule_id, `(${item.finding})`));
+      const isBorderline = item.confidence === "borderline";
+      issues.push(buildIssueFromRule(item.rule_id, `(${item.finding})`, undefined, isBorderline));
     }
   }
 

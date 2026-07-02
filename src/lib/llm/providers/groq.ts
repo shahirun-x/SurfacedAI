@@ -21,6 +21,7 @@ export class GroqProvider implements LLMProvider {
         },
         body: JSON.stringify({
           model: "llama-3.3-70b-versatile",
+          temperature: 0,
           messages: [{ role: "user", content: prompt }],
         }),
       });

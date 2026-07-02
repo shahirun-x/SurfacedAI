@@ -28,7 +28,8 @@ export function getRule(id: string): RuleDefinition {
 export function buildIssueFromRule(
   id: string,
   extraContext?: string,
-  replacements?: Record<string, string>
+  replacements?: Record<string, string>,
+  borderline?: boolean
 ): AuditIssue {
   const rule = getRule(id);
   
@@ -42,7 +43,7 @@ export function buildIssueFromRule(
     }
   }
 
-  return {
+  const issue: AuditIssue = {
     id: rule.id,
     pillar: rule.pillar as AuditIssue["pillar"],
     severity: rule.severity,
@@ -50,4 +51,10 @@ export function buildIssueFromRule(
     description: extraContext ? `${desc} ${extraContext}`.trim() : desc,
     suggestion: sugg,
   };
+
+  if (borderline) {
+    issue.borderline = true;
+  }
+
+  return issue;
 }

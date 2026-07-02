@@ -8,14 +8,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Content is required" }, { status: 400 });
     }
 
-    const rulesToEvaluate = [
-      "headings-question-format",
-      "faq-real-search-questions",
-      "faq-natural-phrasing",
-      "intro-defines-topic-early",
-    ];
+    const { defaultBrandConfig } = await import("@/lib/analysis/config");
 
-    const issues = await runJudgmentChecks(content, rulesToEvaluate);
+    const issues = await runJudgmentChecks(content, defaultBrandConfig);
     return NextResponse.json(issues);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
