@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 interface AuditInputProps {
-  onAuditComplete: () => void;
+  onAuditComplete: (content: string) => void;
 }
 
 export default function AuditInput({ onAuditComplete }: AuditInputProps) {
@@ -18,7 +18,7 @@ export default function AuditInput({ onAuditComplete }: AuditInputProps) {
     setIsAnalyzing(true);
     setTimeout(() => {
       setIsAnalyzing(false);
-      onAuditComplete();
+      onAuditComplete(content);
     }, 1500);
   }
 
