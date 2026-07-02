@@ -221,6 +221,29 @@ export function topKeywords(text: string, n: number = 10): KeywordFrequency[] {
     }));
 }
 
+// ─── Structural signal check ────────────────────────────────────────────────
+
+const MIN_STRUCTURAL_WORDS = 150;
+
+/**
+ * Returns false if the content has no headings, no lists, and is under a
+ * word threshold. Use to gate "insufficient structure" penalties — content
+ * that is *both* short and unstructured should not silently score well.
+ */
+export function hasMinimumStructuralSignal(content: string): boolean {
+  const headings = extractHeadings(content);
+  if (headings.length > 0) return true;
+
+  const lines = splitLines(content);
+  const hasList = lines.some((l) => /^\s*([-*+]|\d+[.)]\s)/.test(l));
+  if (hasList) return true;
+
+  const words = countWords(content);
+  if (words >= MIN_STRUCTURAL_WORDS) return true;
+
+  return false;
+}
+
 // ─── Scoring helper ─────────────────────────────────────────────────────────
 
 import type { AuditIssue } from "@/types/audit";

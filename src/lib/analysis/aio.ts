@@ -13,6 +13,7 @@ import {
   STOPWORDS,
   computeScore,
   createIssue,
+  hasMinimumStructuralSignal,
 } from "./utils";
 
 const PILLAR = "AIO" as const;
@@ -33,6 +34,17 @@ export function analyzeAIO(content: string): PillarScore {
         "No headings — wall of text",
         `The content is ${wordCount} words with zero markdown headings. AI models use headings to chunk and index content semantically.`,
         "Break the content into logical sections with H2 headings, and use H3 for subsections."
+      )
+    );
+  } else if (headings.length === 0 && !hasMinimumStructuralSignal(content)) {
+    // Short AND unstructured — this is a fundamental failure for AI parsability
+    issues.push(
+      createIssue(
+        PILLAR,
+        "critical",
+        "Content too short/unstructured for reliable AI parsing",
+        `The content is only ${wordCount} words with no headings or lists. There is not enough structural signal for AI models to reliably chunk, index, or extract knowledge from this content.`,
+        "Add markdown headings (## Section Title) and expand content to at least 150 words with clear topical sections."
       )
     );
   } else if (headings.length > 0 && wordCount >= 200) {
@@ -83,6 +95,19 @@ export function analyzeAIO(content: string): PillarScore {
           )
         );
       }
+    }
+
+    // Single undifferentiated block — no headings to create chunk boundaries
+    if (headings.length === 0 && paragraphs.length <= 2 && wordCount >= 30) {
+      issues.push(
+        createIssue(
+          PILLAR,
+          "moderate",
+          "No meaningful chunk boundaries",
+          `Content exists as ${paragraphs.length === 1 ? "a single block" : "one or two blocks"} with no heading-based sections. AI models cannot determine where one topic ends and another begins.`,
+          "Split the content into distinct sections with descriptive H2/H3 headings so each chunk has a clear topical scope."
+        )
+      );
     }
   }
 

@@ -12,6 +12,7 @@ import {
   countWords,
   computeScore,
   createIssue,
+  hasMinimumStructuralSignal,
 } from "./utils";
 
 const PILLAR = "AEO" as const;
@@ -141,6 +142,19 @@ export function analyzeAEO(content: string): PillarScore {
         "No FAQ section detected",
         "The content has no dedicated FAQ section or cluster of question-answer headings. FAQ blocks are high-value for answer engine extraction.",
         'Add an "FAQ" or "Frequently Asked Questions" section with 3-5 Q&A pairs relevant to the topic.'
+      )
+    );
+  }
+
+  // ── 5. Insufficient structure for answer extraction ────────────────────
+  if (!hasMinimumStructuralSignal(content)) {
+    issues.push(
+      createIssue(
+        PILLAR,
+        "critical",
+        "Content too unstructured for answer extraction",
+        "The content is short and lacks any structural signals (headings, lists). Answer engines cannot reliably extract answers from unstructured, sparse content.",
+        "Structure your content with headings, bullet lists, and question-answer pairs to make it extractable by answer engines."
       )
     );
   }
