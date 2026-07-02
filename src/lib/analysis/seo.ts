@@ -181,14 +181,17 @@ export function analyzeSEO(content: string, targetKeyword?: string): PillarScore
     const internalLinksBetween = defaultBrandConfig.internalLinksMax 
       ? `between ${defaultBrandConfig.internalLinksMin} and ${defaultBrandConfig.internalLinksMax}` 
       : `at least ${defaultBrandConfig.internalLinksMin}`;
+      
+    const linksWord = defaultBrandConfig.internalLinksMax || defaultBrandConfig.internalLinksMin !== 1 ? "internal links" : "internal link";
+    const qualifyingLinksWord = internalLinks.length === 1 ? "link" : "links";
 
     issues.push(
       buildIssueFromRule(
         "internal-links-minimum-count",
-        `(Found ${internalLinks.length} qualifying links)`,
+        `(Found ${internalLinks.length} qualifying ${qualifyingLinksWord})`,
         {
           "between 2 and 4": internalLinksBetween,
-          "2 to 4": internalLinksRange
+          "2 to 4 internal links": `${internalLinksRange} ${linksWord}`
         }
       )
     );

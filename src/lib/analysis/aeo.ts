@@ -14,6 +14,8 @@ import {
   createIssue,
   hasMinimumStructuralSignal,
 } from "./utils";
+import { buildIssueFromRule } from "./rules/loader";
+import { defaultBrandConfig } from "./config";
 
 const PILLAR = "AEO" as const;
 
@@ -120,6 +122,32 @@ export function analyzeAEO(content: string): PillarScore {
       /\bquestions?\b/i.test(h.text)
   );
 
+  let maxFaqQuestions = 0;
+
+  if (faqHeadings.length > 0) {
+    for (const faqHeading of faqHeadings) {
+      // Find the end line of this FAQ section
+      let endLineIndex = lines.length;
+      for (const h of headings) {
+        if (h.lineIndex > faqHeading.lineIndex && h.level <= faqHeading.level) {
+          endLineIndex = h.lineIndex;
+          break;
+        }
+      }
+
+      // Count questions in this section
+      let sectionQuestions = 0;
+      for (let i = faqHeading.lineIndex + 1; i < endLineIndex; i++) {
+        const line = lines[i].trim();
+        const cleanedLine = line.replace(/^#{1,6}\s+/, "").trim();
+        if (cleanedLine.length > 0 && (cleanedLine.endsWith("?") || QUESTION_PATTERNS.some((p) => p.test(cleanedLine)))) {
+          sectionQuestions++;
+        }
+      }
+      maxFaqQuestions = Math.max(maxFaqQuestions, sectionQuestions);
+    }
+  }
+
   // Also check if there are multiple consecutive question headings (implicit FAQ)
   let consecutiveQuestions = 0;
   let maxConsecutive = 0;
@@ -134,6 +162,10 @@ export function analyzeAEO(content: string): PillarScore {
 
   const hasImplicitFAQ = maxConsecutive >= 3;
 
+  if (hasImplicitFAQ && maxFaqQuestions < maxConsecutive) {
+    maxFaqQuestions = maxConsecutive;
+  }
+
   if (faqHeadings.length === 0 && !hasImplicitFAQ) {
     issues.push(
       createIssue(
@@ -142,6 +174,20 @@ export function analyzeAEO(content: string): PillarScore {
         "No FAQ section detected",
         "The content has no dedicated FAQ section or cluster of question-answer headings. FAQ blocks are high-value for answer engine extraction.",
         'Add an "FAQ" or "Frequently Asked Questions" section with 3-5 Q&A pairs relevant to the topic.'
+      )
+    );
+  } else if (maxFaqQuestions < defaultBrandConfig.faqMinimumCount) {
+    const faqWord = defaultBrandConfig.faqMinimumCount === 1 ? "question" : "questions";
+    const foundWord = maxFaqQuestions === 1 ? "question" : "questions";
+    issues.push(
+      buildIssueFromRule(
+        "faq-minimum-count",
+        `(Found ${maxFaqQuestions} ${foundWord})`,
+        {
+          "5 questions": `${defaultBrandConfig.faqMinimumCount} ${faqWord}`,
+          "at least 5": `at least ${defaultBrandConfig.faqMinimumCount}`,
+          "5 FAQs": `${defaultBrandConfig.faqMinimumCount} FAQs`
+        }
       )
     );
   }

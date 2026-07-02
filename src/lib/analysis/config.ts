@@ -6,6 +6,7 @@ export interface BrandConfig {
   minWordCountComplex: number;
   internalLinksMin: number;
   internalLinksMax: number | null;
+  faqMinimumCount: number;
 }
 
 export const defaultBrandConfig: BrandConfig = {
@@ -16,4 +17,5 @@ export const defaultBrandConfig: BrandConfig = {
   minWordCountComplex: 800,
   internalLinksMin: 1,
   internalLinksMax: null,
+  faqMinimumCount: 3,
 };
