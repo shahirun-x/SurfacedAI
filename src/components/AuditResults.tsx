@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import type { AuditReport, AuditIssue } from "@/types/audit";
+import { generateMarkdownReport } from "@/lib/utils/generateReport";
+import { downloadTextFile } from "@/lib/utils/downloadFile";
 
 interface AuditResultsProps {
   report: AuditReport;
@@ -41,7 +44,20 @@ function severityBadge(severity: AuditIssue["severity"]) {
 }
 
 export default function AuditResults({ report, onNewAudit }: AuditResultsProps) {
+  const [exported, setExported] = useState(false);
   const allIssues = report.pillars.flatMap((p) => p.issues);
+
+  function handleExport() {
+    const markdown = generateMarkdownReport(report);
+    const ts = new Date(report.timestamp)
+      .toISOString()
+      .replace(/[:.]/g, "-")
+      .slice(0, 19);
+    downloadTextFile(`surfaced-audit-${ts}.md`, markdown);
+
+    setExported(true);
+    setTimeout(() => setExported(false), 2000);
+  }
 
   return (
     <div className="w-full max-w-4xl flex flex-col items-center gap-10">
@@ -124,12 +140,17 @@ export default function AuditResults({ report, onNewAudit }: AuditResultsProps) 
           ← New Audit
         </button>
         <button
-          disabled
-          className="px-6 py-2.5 rounded-xl font-medium text-sm bg-neutral-800 text-neutral-500 cursor-not-allowed"
+          onClick={handleExport}
+          className={`px-6 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 ${
+            exported
+              ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30"
+              : "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/20 hover:shadow-violet-500/40 hover:brightness-110"
+          }`}
         >
-          Export as Markdown
+          {exported ? "Downloaded ✓" : "Export as Markdown"}
         </button>
       </div>
     </div>
   );
 }
+
