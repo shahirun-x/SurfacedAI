@@ -14,7 +14,9 @@ import {
   computeScore,
   createIssue,
   hasMinimumStructuralSignal,
+  splitLines,
 } from "./utils";
+import { buildIssueFromRule } from "./rules/loader";
 
 const PILLAR = "AIO" as const;
 const MAX_PARAGRAPH_WORDS = 150;
@@ -24,6 +26,7 @@ export function analyzeAIO(content: string): PillarScore {
   const headings = extractHeadings(content);
   const paragraphs = splitParagraphs(content);
   const wordCount = countWords(content);
+  const lines = splitLines(content);
 
   // ── 1. Semantic heading structure (wall-of-text check) ────────────────
   if (headings.length === 0 && wordCount >= 100) {
@@ -157,6 +160,98 @@ export function analyzeAIO(content: string): PillarScore {
           "Standardize on one term for each concept. For example, pick either \"optimize\" or \"optimization\" and use it consistently."
         )
       );
+    }
+  }
+
+  // ── 4. Key Takeaways ──────────────────────────────────────────────────
+  const KEY_TAKEAWAY_PATTERNS = /^(#+\s+)?(key takeaways?|key points?|tl;?dr|in summary)[:]?/i;
+  let ktLineIndex = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (KEY_TAKEAWAY_PATTERNS.test(lines[i].trim())) {
+      ktLineIndex = i;
+      break;
+    }
+  }
+
+  const firstH2 = headings.find((h) => h.level === 2);
+  const h2Limit = firstH2 ? firstH2.lineIndex : lines.length;
+
+  if (ktLineIndex === -1) {
+    issues.push(buildIssueFromRule("key-takeaways-present"));
+  } else if (ktLineIndex > h2Limit) {
+    issues.push(
+      buildIssueFromRule(
+        "key-takeaways-present",
+        "(A Key Takeaways block was found, but it is not positioned before the first H2.)"
+      )
+    );
+  } else {
+    // Check bullet count and formatting
+    const nextHeading = headings.find((h) => h.lineIndex > ktLineIndex);
+    const blockEnd = nextHeading ? nextHeading.lineIndex : h2Limit;
+
+    let topLevelBullets = 0;
+    let hasNestedBullets = false;
+    let hasNonListText = false;
+
+    for (let i = ktLineIndex + 1; i < blockEnd; i++) {
+      const line = lines[i];
+      if (line.trim().length === 0) continue;
+
+      const match = line.match(/^(\s*)([-*+]|\d+[.)])\s+(.*)/);
+      if (match) {
+        const indent = match[1].length;
+        if (indent >= 2) {
+          hasNestedBullets = true;
+        } else {
+          topLevelBullets++;
+        }
+      } else {
+        hasNonListText = true;
+      }
+    }
+
+    if (topLevelBullets < 3 || topLevelBullets > 5 || hasNestedBullets || hasNonListText) {
+      let msg = `(Found ${topLevelBullets} bullets`;
+      if (hasNestedBullets) msg += ", contains nested bullets";
+      if (hasNonListText) msg += ", contains non-list paragraph text";
+      msg += ")";
+      issues.push(buildIssueFromRule("key-takeaways-bullet-count", msg));
+    }
+  }
+
+  // ── 5. Real-world example visible text (heuristic) ────────────────────
+  const IMAGE_PATTERN = /!\[([^\]]*)\]\(([^)]+)\)/;
+  const genericAlt = /^(image|photo|picture|untitled|screenshot)?$/i;
+
+  const isTextLine = (idx: number) => {
+    if (idx < 0 || idx >= lines.length) return false;
+    const l = lines[idx].trim();
+    if (l.length === 0) return false;
+    if (l.startsWith("![")) return false;
+    if (l.startsWith("#")) return false;
+    return true;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const match = IMAGE_PATTERN.exec(line);
+    if (match) {
+      const alt = match[1].trim();
+      if (genericAlt.test(alt)) {
+        const hasTextBefore = isTextLine(i - 1) || isTextLine(i - 2);
+        const hasTextAfter = isTextLine(i + 1) || isTextLine(i + 2);
+
+        if (!hasTextBefore && !hasTextAfter) {
+          const issue = buildIssueFromRule(
+            "real-world-example-visible-text",
+            "(Found an isolated image with generic/empty alt text that might contain trapped text)"
+          );
+          issue.severity = "minor";
+          issues.push(issue);
+          break; // Only flag once
+        }
+      }
     }
   }
 
