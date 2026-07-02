@@ -11,12 +11,12 @@ import { analyzeGEO } from "./geo";
 import { analyzeAIO } from "./aio";
 import { analyzeTechnical } from "./technical";
 
-export function runFullAudit(content: string): AuditReport {
+export function runFullAudit(content: string, targetKeyword?: string): AuditReport {
   // Reset issue ID counter for a clean run
   resetIssueCounter();
 
   const pillars = [
-    analyzeSEO(content),
+    analyzeSEO(content, targetKeyword),
     analyzeAEO(content),
     analyzeGEO(content),
     analyzeAIO(content),

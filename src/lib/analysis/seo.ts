@@ -14,13 +14,14 @@ import {
   computeScore,
   createIssue,
 } from "./utils";
+import { buildIssueFromRule } from "./rules/loader";
+import { defaultBrandConfig } from "./config";
 
 const PILLAR = "SEO" as const;
-const MIN_WORD_COUNT = 300;
 const KEYWORD_STUFFING_THRESHOLD = 5.0; // density % above which we flag
 const LOW_KEYWORD_DENSITY = 0.8; // density % below which top keyword is too rare
 
-export function analyzeSEO(content: string): PillarScore {
+export function analyzeSEO(content: string, targetKeyword?: string): PillarScore {
   const issues: AuditIssue[] = [];
   const headings = extractHeadings(content);
   const wordCount = countWords(content);
@@ -28,6 +29,8 @@ export function analyzeSEO(content: string): PillarScore {
 
   // ── 1. Title / H1 detection ───────────────────────────────────────────
   const h1s = headings.filter((h) => h.level === 1);
+  let titleText = "";
+
   if (h1s.length === 0) {
     // Check if the first non-empty line looks like a title (short, no period)
     const firstLine = lines.find((l) => l.trim().length > 0)?.trim() || "";
@@ -46,6 +49,26 @@ export function analyzeSEO(content: string): PillarScore {
           "Add a descriptive H1 heading (# Your Title) as the first element of your content."
         )
       );
+    } else {
+      titleText = firstLine.replace(/^#+\s*/, "");
+    }
+  } else {
+    titleText = h1s[0].text;
+  }
+
+  if (titleText) {
+    if (titleText.length >= 60) {
+      issues.push(
+        buildIssueFromRule("title-max-length", `(Current length: ${titleText.length} chars)`)
+      );
+    }
+
+    if (targetKeyword) {
+      if (!titleText.toLowerCase().includes(targetKeyword.toLowerCase())) {
+        issues.push(
+          buildIssueFromRule("title-primary-keyword-present", `(Missing keyword: "${targetKeyword}")`)
+        );
+      }
     }
   }
 
@@ -64,14 +87,14 @@ export function analyzeSEO(content: string): PillarScore {
   }
 
   // ── 3. Content length ─────────────────────────────────────────────────
-  if (wordCount < MIN_WORD_COUNT) {
+  // Note: We use the standard-articles threshold by default as a simplification,
+  // since we cannot automatically determine 'complex' topics yet.
+  if (wordCount < defaultBrandConfig.minWordCountStandard) {
     issues.push(
-      createIssue(
-        PILLAR,
-        "critical",
-        "Thin content",
-        `The content is only ${wordCount} words. Content under ${MIN_WORD_COUNT} words is typically considered thin by search engines and may struggle to rank.`,
-        `Expand the content to at least ${MIN_WORD_COUNT} words with substantive, relevant information.`
+      buildIssueFromRule(
+        "content-length-standard-articles",
+        `(Current word count: ${wordCount})`,
+        { "1,700-1,800": defaultBrandConfig.minWordCountStandard.toString() }
       )
     );
   }
@@ -134,6 +157,49 @@ export function analyzeSEO(content: string): PillarScore {
           "Aim for a Flesch score of 50–70 by shortening sentences and replacing jargon where possible."
         )
       );
+    }
+  }
+
+  // ── 6. Internal links ─────────────────────────────────────────────────
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let match;
+  const internalLinks = [];
+  while ((match = linkRegex.exec(content)) !== null) {
+    const url = match[2].trim();
+    if (url.startsWith("/") && url !== "/" && !url.includes("pricing")) {
+      internalLinks.push({ url, index: match.index });
+    }
+  }
+
+  if (
+    internalLinks.length < defaultBrandConfig.internalLinksMin ||
+    (defaultBrandConfig.internalLinksMax !== null && internalLinks.length > defaultBrandConfig.internalLinksMax)
+  ) {
+    const internalLinksRange = defaultBrandConfig.internalLinksMax 
+      ? `${defaultBrandConfig.internalLinksMin} to ${defaultBrandConfig.internalLinksMax}` 
+      : `at least ${defaultBrandConfig.internalLinksMin}`;
+    const internalLinksBetween = defaultBrandConfig.internalLinksMax 
+      ? `between ${defaultBrandConfig.internalLinksMin} and ${defaultBrandConfig.internalLinksMax}` 
+      : `at least ${defaultBrandConfig.internalLinksMin}`;
+
+    issues.push(
+      buildIssueFromRule(
+        "internal-links-minimum-count",
+        `(Found ${internalLinks.length} qualifying links)`,
+        {
+          "between 2 and 4": internalLinksBetween,
+          "2 to 4": internalLinksRange
+        }
+      )
+    );
+  }
+
+  if (internalLinks.length > 0) {
+    const oneThird = Math.floor(content.length / 3);
+    const twoThirds = Math.floor((content.length * 2) / 3);
+    const hasMidLink = internalLinks.some(link => link.index >= oneThird && link.index <= twoThirds);
+    if (!hasMidLink) {
+      issues.push(buildIssueFromRule("internal-links-mid-article-placement"));
     }
   }
 
