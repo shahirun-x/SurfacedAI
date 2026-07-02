@@ -114,7 +114,7 @@ export default function AuditResults({ report, onNewAudit }: AuditResultsProps) 
             </span>
             <span
               className="text-[11px]"
-              style={{ color: "var(--color-border)" }}
+              style={{ color: "var(--color-text-muted)" }}
             >
               / 100
             </span>

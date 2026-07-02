@@ -121,13 +121,7 @@ export default function DepthGauge({ score }: DepthGaugeProps) {
 
       {/* Large score display */}
       <div
-        className={`font-instrument text-7xl font-bold leading-none tabular-nums ${
-          clampedScore >= 80
-            ? "text-(--color-teal)"
-            : clampedScore >= 50
-            ? "text-(--color-text-muted)"
-            : "text-(--color-amber)"
-        }`}
+        className="font-instrument text-7xl font-bold leading-none tabular-nums text-(--color-teal)"
         aria-hidden="true"
       >
         {clampedScore}
